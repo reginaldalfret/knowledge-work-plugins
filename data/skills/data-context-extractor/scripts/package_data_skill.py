@@ -83,11 +83,15 @@ def package_skill(skill_path: str, output_dir: str = None) -> Path | None:
 
     # Create the zip file
     try:
+        files_added = 0
         with zipfile.ZipFile(skill_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for file_path in skill_path.rglob('*'):
                 if file_path.is_file():
-                    # Skip hidden files and common junk
-                    if any(part.startswith('.') for part in file_path.parts):
+                    # Calculate relative path to the skill directory
+                    rel_to_skill = file_path.relative_to(skill_path)
+
+                    # Skip hidden files and common junk within the skill
+                    if any(part.startswith('.') for part in rel_to_skill.parts):
                         continue
                     if file_path.name in ['__pycache__', '.DS_Store', 'Thumbs.db']:
                         continue
@@ -95,7 +99,14 @@ def package_skill(skill_path: str, output_dir: str = None) -> Path | None:
                     # Calculate relative path within the zip
                     arcname = file_path.relative_to(skill_path.parent)
                     zipf.write(file_path, arcname)
+                    files_added += 1
                     print(f"  Added: {arcname}")
+
+        if files_added == 0:
+            print(f"Error: No files were added to the package: {skill_filename}")
+            if skill_filename.exists():
+                skill_filename.unlink()
+            return None
 
         print(f"\nSuccessfully packaged skill to: {skill_filename}")
         return skill_filename
